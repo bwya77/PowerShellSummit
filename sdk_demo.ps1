@@ -87,17 +87,20 @@ $AzureApp = Get-MgApplication -Filter "displayName eq 'PSSummit'"
 
 $AppSecret = Add-MgApplicationPassword -ApplicationId $AzureApp.Id
 
-#Add an application permission, Sites.ReadWrite.All | 00000002-0000-0000-c000-000000000000 is the Id for the Graph API
+#Add an application permission, Sites.ReadWrite.All | 00000003-0000-0000-c000-000000000000 is the Id for the Graph API
 #List of common Microsoft Resource IDs can be found here: https://www.shawntabrizi.com/aad/common-microsoft-resources-azure-active-directory/
-#Can get list of permission Ids from Azure CLI - az ad sp list --filter "displayName eq 'Microsoft Graph'" --query '[].oauth2Permissions[].{Value:value, Id:id, UserConsentDisplayName:userConsentDisplayName}' -o table
+#Can get list of permission Ids from Azure CLI - az ad sp show --id 00000003-0000-0000-c000-000000000000
 Update-MgApplication -ApplicationId $AzureApp.Id -RequiredResourceAccess @{ ResourceAppId = "00000003-0000-0000-c000-000000000000"
 ResourceAccess = @(
         @{ 
-            Id = "89fe6a52-be36-487e-b7d8-d061c450a026"
-            Type = "Scope"
+            Id = "332a536c-c7ef-4017-ab91-336970924f0d"
+            Type = "Role"
          }
          )
 }
+#Type would be Scope for delegated permission
+
+#Need to go into the portal and grant admin consent
 
 #Disconnect from Microsoft Graph
 Disconnect-MgGraph
