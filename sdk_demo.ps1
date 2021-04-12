@@ -11,8 +11,12 @@ Get-MgProfile
 #Change to the Beta API
 Select-MgProfile -Name "Beta"
 
+#Change to the Beta API
+Select-MgProfile -Name "v1.0"
+
 #Connect to Microsoft Graph (By default it uses Device Code Flow)
-Connect-MgGraph -Scopes "User.Read.All"
+#Each API in the Microsoft Graph is protected by one or more permission scopes. Graph Api Reference (aka.ms/graphapiref) can help you determine the permission necessary for the call
+Connect-MgGraph -Scopes "User.Read.All","Directory.Read.All"
 
 #List all of our users in the our Azure AD Directory
 Get-MgUser -All
@@ -32,11 +36,68 @@ lambda operator all all
 Starts with startsWith
 Ends with endsWith
 #>
-Get-MgUser -Filter "displayName eq 'Bradley Wyatt'"
+$Me = Get-MgUser -Filter "displayName eq 'Bradley Wyatt'"
 
 #Get User Info
-Get-MgUser -UserId "5bcffade-2afd-48a2-8096-390a9090555c"
+Get-MgUser -UserId $Me.Id
 
 #Query Parameters
-Get-MgUser -UserId "5bcffade-2afd-48a2-8096-390a9090555c" -Property DisplayName, Mail
+Get-MgUser -UserId $Me.Id -Property DisplayName, Mail
 
+#Add permissions to create a user
+Connect-MgGraph -Scopes "User.ReadWrite.All", "Directory.ReadWrite.All"
+
+#Create a new user in my environment
+$UserSplat = @{
+    DisplayName       = "Pauly PowerShell"
+    MailNickName      = "Pauly.PowerShell"
+    UserPrincipalName = "Pauly.PowerShell@thelazyadministrator.com"
+}
+$passwordProfile = @{
+    "forceChangePasswordNextSignIn"        = true
+    "forceChangePasswordNextSignInWithMfa" = false
+    "password"                             = "TemporaryP@ssword!"
+  }
+  
+New-MgUser -DisplayName $UserSplat.DisplayName -AccountEnabled -PasswordProfile $passwordProfile -MailNickname $UserSplat.MailNickName -UserPrincipalName $UserSplat.UserPrincipalName
+
+#Get Permissions 
+Connect-MgGraph -Scopes "Group.ReadWrite.All","Team.ReadBasic.All","TeamMember.ReadWrite.All"
+
+#Create a team for PowerShell Summit
+New-MgTeam -DisplayName "PowerShell Summit" -Description "PS Summit Team" -AdditionalProperties @{"template@odata.bind"="https://graph.microsoft.com/beta/teamsTemplates('standard')"}
+
+#Get my new Team by looking up the Group
+$Team = Get-MgGroup -Filter "displayName eq 'PowerShell Summit'" 
+
+New-MgTeamMember -Id $Me.Id -TeamId $Team.Id -Roles "Owner"  -AdditionalProperties @{ 
+                                                                    "@odata.type" = "#microsoft.graph.aadUserConversationMember"; 
+                                                                    "user@odata.bind" = "https://graph.microsoft.com/v1.0/users/" + $me.Id
+                                                                    }
+
+#Sends a welcome message to the newly created Team
+$PrimaryChannel = Get-MgTeamPrimaryChannel -TeamId $Team.Id
+New-MgTeamChannelMessage -TeamId $Team.Id -ChannelId $PrimaryChannel.Id -Body @{Content = "Welcome to Teams!"}
+
+# Create an web app with implicit auth
+New-MgApplication -displayName "PSSummit" -Web @{ RedirectUris = "https://localhost:3000/"; ImplicitGrantSettings = @{ EnableAccessTokenIssuance = $true; EnableIdTokenIssuance = $true; } } 
+
+#Get newly created Azure AD Application
+$AzureApp = Get-MgApplication -Filter "displayName eq 'PSSummit'"
+
+$AppSecret = Add-MgApplicationPassword -ApplicationId $AzureApp.Id
+
+#Add an application permission, Sites.ReadWrite.All | 00000002-0000-0000-c000-000000000000 is the Id for the Graph API
+#List of common Microsoft Resource IDs can be found here: https://www.shawntabrizi.com/aad/common-microsoft-resources-azure-active-directory/
+#Can get list of permission Ids from Azure CLI - az ad sp list --filter "displayName eq 'Microsoft Graph'" --query '[].oauth2Permissions[].{Value:value, Id:id, UserConsentDisplayName:userConsentDisplayName}' -o table
+Update-MgApplication -ApplicationId $AzureApp.Id -RequiredResourceAccess @{ ResourceAppId = "00000003-0000-0000-c000-000000000000"
+ResourceAccess = @(
+        @{ 
+            Id = "89fe6a52-be36-487e-b7d8-d061c450a026"
+            Type = "Scope"
+         }
+         )
+}
+
+#Disconnect from Microsoft Graph
+Disconnect-MgGraph
