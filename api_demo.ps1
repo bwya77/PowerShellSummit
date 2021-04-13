@@ -14,8 +14,6 @@ $ReqTokenBody = @{
 $TokenResponse = Invoke-RestMethod -Uri "https://login.microsoftonline.com/$TenantName/oauth2/v2.0/token" -Method POST -Body $ReqTokenBody
 $TokenResponse
 
-
-
 #Inspect the token using JWTDetails
 #JWTDetails PowerShell Module by Darren J Robinson, Microsoft MVP
 #https://github.com/darrenjrobinson/JWTDetails
@@ -123,6 +121,15 @@ $request = @{
 }
 Invoke-RestMethod @request
 
+#Delete the file using the Delete method
+$request = @{
+    Method      = "Delete"
+    Uri         = "https://graph.microsoft.com/v1.0/users/brad@thelazyadministrator.com/drive/items/$($firstFile.id)"
+    ContentType = "application/json"
+    Headers     = @{Authorization = "Bearer $($Tokenresponse.access_token)"}
+}
+Invoke-RestMethod @request
+
 
 
 #Refresh Token
@@ -167,3 +174,5 @@ $request = @{
 $TokReqRes = Invoke-RestMethod @request
 #View new expiry date time
 Get-JWTDetails($TokReqRes.access_token)
+
+

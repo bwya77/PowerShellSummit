@@ -90,6 +90,7 @@ $NewUAzureApp = @{
     } 
   }
 }
+#New is doing a POST method
 New-MgApplication @NewUAzureApp
 
 #Get newly created Azure AD Application
@@ -101,6 +102,7 @@ $AppSecret
 #Add an application permission, Sites.Read.All, Directory.ReadWrite.All, Files.ReadWrite.All | 00000003-0000-0000-c000-000000000000 is the Id for the Graph API
 #List of common Microsoft Resource IDs can be found here: https://www.shawntabrizi.com/aad/common-microsoft-resources-azure-active-directory/
 #Can get list of permission Ids from Azure CLI - az ad sp show --id 00000003-0000-0000-c000-000000000000
+#Update is doing a PATCH method
 Update-MgApplication -ApplicationId $AzureApp.Id -RequiredResourceAccess @{ ResourceAppId = "00000003-0000-0000-c000-000000000000"
 ResourceAccess = @(
         @{ 
